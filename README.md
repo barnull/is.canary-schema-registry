@@ -1,11 +1,11 @@
-# Canary event dictionary
+# is.canary schema registry
 
 ## Overview
 
 Before you can send your own event and context types into Snowplow (using the track unstructured events and custom contexts features of Snowplow), you need to:
 
 1. Define a JSON schema for each of the events and context types
-2. Upload those schemas to your Iglu schema repository
+2. Upload those schemas to your Iglu schema registry
 3. Define a corresponding jsonpath file, and make sure this is uploaded your jsonpaths directory in Amazon S3
 4. Create a corresponding Redshfit table definition, and create this table in your Redshift cluster
 
@@ -24,7 +24,7 @@ We recommend setting up the following 3 tools before staring:
 
 In order to start sending a new event or context type into Snowplow, you first need to define a new schema for that event.
 
-1. Create a file in the repo for the new schema e.g. `/schemas/com.mycompany/new_event_or_context_name/jsonschema/1-0-0`
+1. Create a file in the repo for the new schema e.g. `/schemas/is.canary/new_event_or_context_name/jsonschema/1-0-0`
 2. Create the schema in that file. Follow the `/schemas/com.example_company/example_event/jsonschema/1-0-0`
 3. Save the file schema
 
@@ -42,18 +42,17 @@ git commit -m "Committed finalized schema"
 git push
 ```
 
-Then push it to Iglu:
+Then push it to Iglu. Note that as a trial user you will have to ask the Snowplow team to do this for you. As a Managed Services
+customer you would be able to do it yourself as follows:
 
 ```
-aws s3 cp schemas s3://snowplow-canary-schemas/schemas --include "*" --recursive
+aws s3 cp schemas s3://snowplow-is-canary-iglu-schemas/schemas --include "*" --recursive
 ```
-
-Note that for trial users a member of the Snowplow team will need to perform the push for you. Please get in touch with your Snowplow representative to ensure that this happens.
 
 Useful resources
 
 * [Iglu schema repository 0.1.0 release blog post](http://snowplowanalytics.com/blog/2014/07/01/iglu-schema-repository-released/)
-* [Iglu central](https://github.com/snowplow/iglu-central) - centralized repository for all the schemas hosted by the Snowplow team
+* [Iglu central](https://github.com/snowplow/iglu-central) - centralized registry for all the schemas hosted by the Snowplow team
 * [Iglu](https://github.com/snowplow/iglu) - respository with both Iglu server and client libraries
 
 
@@ -62,7 +61,7 @@ Useful resources
 Once you've defined the jsonschema for your new event or context type you need to create a correpsonding jsonpath file and sql table definition. This can be done programmatically using [Schema Guru] [schema-guru-github]. From the root of the repo:
 
 ```
-/path/to/schema-guru-0.4.0 ddl --with-json-paths schemas/com.mycompany/new_event_or_context_name
+/path/to/schema-guru-0.6.2 ddl --with-json-paths schemas/is.canary/new_event_or_context_name
 ```
 
 A corresponding jsonpath file and sql table definition file will be generated in the appropriate folder in the repo.
@@ -70,7 +69,7 @@ A corresponding jsonpath file and sql table definition file will be generated in
 Note that you can create SQL table definition and jsonpath files for all the events / contexts schema'd as follows:
 
 ```
-/path/to/schema-guru-0.4.0 ddl --with-json-paths schemas/com.mycompany
+/path/to/schema-guru-0.6.2 ddl --with-json-paths schemas/is.canary
 ```
 
 
@@ -84,19 +83,28 @@ git commit -m "Committed finalized jsonpath"
 git push
 ```
 
-Then push to Iglu:
+Then push to Iglu. Again, you can only do this yourself as a Managed Services customers. As a trial user you will need to
+ask a member of the Snowplow Analytics team to do this for you.
 
 ```
-aws s3 cp jsonpaths s3://snowplow-sdl-rtdl-iglu-jsonpaths/jsonpaths --include "*" --recursive
+aws s3 cp jsonpaths s3://snowplow-is-canary-iglu-jsonpaths/jsonpaths --include "*" --recursive
 ```
-
-Again - note that trial users will have to ask their Snowplow representative to do the push for them.
 
 ## 5. Creating or updating the table definition in Redshift
 
+As a trial user you'll have to ask a member of the Snowplow team to add your table to Redshift.
+
+As a Managed Service user, you'd work through the following steps:
+
 Once you've committed your updated table definition into Github, you need to either create or modify the table in Redshift, either by executing the `CREATE TABLE...` statement directly, or `ALTER TABLE` (if you're e.g. adding a column to an existing table).
 
-Again, as a trial user, you will need a member of the Snowplow team to do this for you.
+Note that it is essential that any new tables you create are owned by the `storageloader` user. This is the user that we use to load and model data in Redshift. Once you've created your new table:
+
+```sql
+CREATE TABLE snowplow.my_new_table...
+```
+
+
 
 ## 6. Sending data into Snowplow using the schema reference as custom unstructured events or contexts
 
@@ -155,7 +163,7 @@ Documentation on jsonpaths:
 * Example jsonpath files can be found on the [Snowplow repo](https://github.com/snowplow/snowplow/tree/master/4-storage/redshift-storage/jsonpaths). Note that the corresponding jsonschema definitions are stored in [Iglu central](https://github.com/snowplow/iglu-central/tree/master/schemas)
 * Amazon documentation on jsonpath files can be found [here](http://docs.aws.amazon.com/redshift/latest/dg/copy-usage_notes-copy-from-json.html)
 
-Documentaiton on creating tablels in Redshift:
+Documentaiton on creating tables in Redshift:
 
 * Example Redshift table definitions can be found on the [Snowplow repo](https://github.com/snowplow/snowplow/tree/master/4-storage/redshift-storage/sql). Note that corresponding jsonschema definitions are stored in [Iglu central](https://github.com/snowplow/iglu-central/tree/master/schemas)
 * Amazon documentation on Redshift create table statements can be found [here](http://docs.aws.amazon.com/redshift/latest/dg/r_CREATE_TABLE_NEW.html). A list of Redshift data types can be found [here](http://docs.aws.amazon.com/redshift/latest/dg/c_Supported_data_types.html)
